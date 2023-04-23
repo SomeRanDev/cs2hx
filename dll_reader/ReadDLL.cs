@@ -112,7 +112,7 @@ class ReadDLL {
 		if(t == null)
 			return "";
 
-		if(t.IsGenericParameter || t.IsGenericMethodParameter) {
+		if(t.IsGenericParameter || t.IsGenericMethodParameter || t.IsGenericTypeParameter) {
 			return t.Name;
 		}
 
