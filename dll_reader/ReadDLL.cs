@@ -158,13 +158,12 @@ class ReadDLL {
 	// - We need proper capitalization (OK: System.String vs WRONG: cs.system.String)
 	// - Use "TypeName`X" to denote a type with X type arguments (OK: List`1 vs WRONG: List WRONG: List<T>)
 	public static void Main(String[] args) {
-		if(args.Length > 0) {
-			var t = Type.GetType(args[0]);
+		// Make sure we have enough arguments!!
+		if(args.Length <= 0) {
+			Console.WriteLine("<no type path provided>");
+			return;
+		}
 
-			if(t == null) {
-				Console.WriteLine("<no type found>");
-				return;
-			}
 		// The first argument is the type path we're looking for!
 		var HaxePath = args[0];
 
@@ -174,15 +173,6 @@ class ReadDLL {
 			Assemblies.Add(Assembly.LoadFrom(args[i]));
 		}
 
-			def.Namespace = t.Namespace ?? "";
-			def.Name = t.Name;
-			def.SuperPath = FullName(t.BaseType);
-			foreach(var i in t.GetInterfaces()) {
-				def.Interfaces.Add(FullName(i));
-			}
-			foreach(var arg in t.GetGenericArguments()) {
-				def.Params.Add(new HxTypeParam(arg));
-			}
 		// Separate the namespace part and the class part.
 		// The Haxe namespaces must all be lowercase, so they are compared differently.
 		var HaxePathMems = HaxePath.Split(".");
@@ -196,19 +186,32 @@ class ReadDLL {
 			return;
 		}
 
-			var fields = t.GetFields(BindingFlags.Public);
-			foreach(var f in fields) {
-				def.Fields.Add(new HxField(f));
-			}
-			foreach(var p in t.GetProperties(BindingFlags.Public)) {
-				def.Props.Add(new HxProperty(p));
-			}
-			foreach(var m in t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
-				def.Methods.Add(new HxMethod(m));
-			}
+		// Retrieve all the type information and store in HxTypeDef
+		var def = new HxTypeDef();
 
-			def.Print();
+		def.Namespace = t.Namespace ?? "";
+		def.Name = t.Name;
 		def.IsInterface = t.IsInterface;
+		def.SuperPath = FullName(t.BaseType);
+		foreach(var i in t.GetInterfaces()) {
+			def.Interfaces.Add(FullName(i));
 		}
+		foreach(var arg in t.GetGenericArguments()) {
+			
+			def.Params.Add(new HxTypeParam(arg));
+		}
+
+		foreach(var f in t.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
+			def.Fields.Add(new HxField(f));
+		}
+		foreach(var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
+			def.Props.Add(new HxProperty(p));
+		}
+		foreach(var m in t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)) {
+			def.Methods.Add(new HxMethod(m));
+		}
+
+		// Print
+		def.Print();
 	}
 }
