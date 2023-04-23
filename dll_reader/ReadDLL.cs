@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 class HxTypeParam {
 	string Name;
@@ -76,7 +77,7 @@ class HxTypeDef {
 	public string? Doc = null;
 
 	public void Print() {
-		Console.WriteLine(Name.Split("`")[0]);
+		Console.WriteLine(ReadDLL.ConvertGenericTick(Name));
 		Console.WriteLine(IsInterface ? "true" : "false");
 		Console.WriteLine("cs" + (Namespace.Length > 0 ? "." : "") + Namespace.ToLower());
 		Console.WriteLine(SuperPath);
@@ -134,7 +135,17 @@ class ReadDLL {
 		}
 
 		var tp = (args.Length > 0 ? ("<" + string.Join(", ", generics) + ">") : "");
-		return "cs." + (t.Namespace != null ? (t.Namespace.ToLower() + ".") : "") + t.Name.Split("`")[0] + tp;
+		return "cs." + (t.Namespace != null ? (t.Namespace.ToLower() + ".") : "") + ConvertGenericTick(t.Name) + tp;
+	}
+
+	// Convert TYPENAME`123 -> TYPENAME_123
+	public static string ConvertGenericTick(string Name) {
+		Regex rx = new Regex(@"^(.*)`(\d+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		var m = rx.Matches(Name);
+		if(m.Count > 0) {
+			return m[0].Groups[1].Value + "_" + m[0].Groups[2].Value;
+		}
+		return Name;
 	}
 
 	// Store references to all the assemblies that are loaded.
@@ -146,7 +157,7 @@ class ReadDLL {
 		var assemblies = AppDomain.CurrentDomain.GetAssemblies().Concat(Assemblies);
 		foreach(var assembly in assemblies) {
 			foreach(Type type in assembly.GetTypes()) {
-				if((type.Namespace?.ToLower() ?? "") == HaxeNS && type.Name.Split("`")[0] == HaxeName) {
+				if((type.Namespace?.ToLower() ?? "") == HaxeNS && ConvertGenericTick(type.Name) == HaxeName) {
 					return type;
 				}
 			}
@@ -197,7 +208,6 @@ class ReadDLL {
 			def.Interfaces.Add(FullName(i));
 		}
 		foreach(var arg in t.GetGenericArguments()) {
-			
 			def.Params.Add(new HxTypeParam(arg));
 		}
 
