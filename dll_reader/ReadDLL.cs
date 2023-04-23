@@ -38,7 +38,7 @@ class HxProperty {
 
 	public void Print() {
 		Console.WriteLine(prop.Name);
-		Console.WriteLine(prop.PropertyType);
+		Console.WriteLine(ReadDLL.FullName(prop.PropertyType));
 		Console.WriteLine(prop.CanRead);
 		Console.WriteLine(prop.CanWrite);
 	}
