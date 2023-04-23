@@ -122,6 +122,7 @@ class ReadDLL {
 			case "System.Void": return "Void";
 			case "System.Int32": return "Int";
 			case "System.Double": return "Float";
+			case "System.Boolean": return "Bool";
 		}
 
 		var args = t.GetGenericArguments();
