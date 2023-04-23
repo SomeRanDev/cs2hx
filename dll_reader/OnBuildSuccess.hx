@@ -1,3 +1,6 @@
+import haxe.io.Path;
+import sys.io.File;
+
 /**
 	This Haxe script is automatically called by Visual Studio
 	upon a successful build of the dll_reader C# project.
@@ -10,11 +13,21 @@
 function main() {
 	final ext = Sys.systemName() == "Windows" ? ".exe" : "";
 	final filename = "dll_reader" + ext;
-	final srcPath = "./bin/Release/net7.0/" + filename;
+	final srcPath = "./bin/Release/net7.0";
+	final outPath = "../dll_reader_bin/" + Sys.systemName();
+
 	if(sys.FileSystem.exists(srcPath)) {
-		final destPath = "../" + filename;
-		sys.io.File.copy(srcPath, destPath);
+		if(!sys.FileSystem.exists(outPath)) {
+			sys.FileSystem.createDirectory(outPath);
+		}
+		copyFolder(srcPath, outPath);
 	} else {
 		Sys.println("OnBuildSucess.hx could not find the executable to copy.");
+	}
+}
+
+function copyFolder(dir: String, out: String) {
+	for(f in sys.FileSystem.readDirectory(dir)) {
+		File.copy(Path.join([dir, f]), Path.join([out, f]));
 	}
 }
