@@ -117,7 +117,7 @@ class ReadDLL {
 		}
 
 		if(t.IsArray) {
-			return FullName(t.GetElementType()) + "[]";
+			return "Array<" + FullName(t.GetElementType()) + ">";
 		}
 
 		switch(t.Namespace + "." + t.Name) {
