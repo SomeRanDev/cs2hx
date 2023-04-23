@@ -240,21 +240,62 @@ class Cs {
 			throw "`stringToTypePath` provided empty String";
 		}
 
+		csTypeStr = StringTools.trim(csTypeStr);
+
 		var name = csTypeStr;
 		var params: Array<TypeParam> = [];
 		if(StringTools.endsWith(csTypeStr, ">")) {
 			final parts = ~/</.split(csTypeStr);
-			parts[1] = parts[1].substr(0, parts[1].length - 1);
-			name = parts[0];
-			params = parts[1].split(",").map(t -> TPType(TPath(stringToTypePath(t))));
+			// if(parts.length < 2) {
+			// 	throw "Weird C# type string: " + csTypeStr;
+			// }
+			// parts[1] = parts[1].substr(0, parts[1].length - 1);
+			// name = parts[0];
+			// if(StringTools.contains(parts[1], ">")) {
+			// 	throw "Test : " + parts[1];
+			// }
+
+			function parseTypes(t:Array<String>):Array<TypePath> {
+				final result = [];
+				var name = "";
+				while (t.length > 0) {
+					final c = t.shift();
+					if (StringTools.isSpace(c, 0)) {}
+					else if (c == ",") {
+						result.push(_strToPath(name, []));
+						name = "";
+					} else if (c == ">") {
+						result.push(_strToPath(name, []));
+						return result;
+					} else if (c == "<") {
+						final pp:Array<TypePath> = parseTypes(t);
+						result.push(_strToPath(name, pp.map(p -> TPType(TPath(p)))));
+					} else {
+						name += c;
+					}
+				}
+		
+				throw "Error parsing " + t.join("");
+			}
+
+			final result = _strToPath(parts[0], parseTypes(parts[1].split("")).map(p -> TPType(TPath(p))));
+			trace(result);
+			return result;
+
+			//params = parts[1].split(",").map(t -> TPType(TPath(stringToTypePath(t))));
 
 			// Comment this out for weird issue??
 			// Too many type parameters?? How to fix this???
-			if(name == "cs.system.ValueTuple" || name == "cs.system.IComparable" || name == "cs.system.Array") {
-				return switch(macro : Dynamic) { case TPath(p): p; case _: throw "Impossible"; }
-			}
+			//trace(csTypeStr);
+			//if(name == "cs.system.ValueTuple" || name == "cs.system.IComparable" || name == "cs.system.Array") {
+			//	return switch(macro : Dynamic) { case TPath(p): p; case _: throw "Impossible"; }
+			//}
 		}
-		return switch(haxe.macro.MacroStringTools.toComplex(name)) {
+		return _strToPath(name, params);
+	}
+
+	static function _strToPath(s: String, params: Array<TypeParam>): haxe.macro.Expr.TypePath {
+		return switch(haxe.macro.MacroStringTools.toComplex(s)) {
 			case TPath(p): {
 				{
 					name: p.name,
