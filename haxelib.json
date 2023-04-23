@@ -1,0 +1,18 @@
+{
+  "name": "cs2hx",
+  "version": "1.0.0",
+  "description": "C# DLL -> Haxe externs (PLUS automatic Haxe compile-time definitions)",
+  "url": "https://github.com/RobertBorghese/cs2hx",
+  "license": "MIT",
+  "tags": [
+    "cs",
+    "csharp",
+    "externs",
+    "macro",
+    "metadata",
+    "extension"
+  ],
+  "classPath": "src/",
+  "releasenote": "Initial release.",
+  "contributors": ["RobertBorghese"]
+}
