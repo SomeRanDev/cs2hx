@@ -1,0 +1,10 @@
+-cp src
+
+# -lib cs2hx
+-cp ../src
+
+-D debug_cs2hx
+--macro cs2hx.Cs.addDll("./Test.hxml")
+
+-main Main
+--interp
