@@ -67,6 +67,7 @@ class HxTypeDef {
 	public List<HxTypeParam> Params = new List<HxTypeParam>();
 	public string Namespace = "";
 	public string Name = "";
+	public bool IsInterface = false;
 	public string SuperPath = "";
 	public List<string> Interfaces = new List<string>();
 	public List<HxField> Fields = new List<HxField>();
@@ -76,6 +77,7 @@ class HxTypeDef {
 
 	public void Print() {
 		Console.WriteLine(Name.Split("`")[0]);
+		Console.WriteLine(IsInterface ? "true" : "false");
 		Console.WriteLine("cs" + (Namespace.Length > 0 ? "." : "") + Namespace.ToLower());
 		Console.WriteLine(SuperPath);
 		Console.WriteLine(Interfaces.Count);
@@ -171,6 +173,7 @@ class ReadDLL {
 			}
 
 			def.Print();
+		def.IsInterface = t.IsInterface;
 		}
 	}
 }
