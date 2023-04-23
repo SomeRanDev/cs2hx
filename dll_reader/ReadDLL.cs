@@ -137,6 +137,23 @@ class ReadDLL {
 		return "cs." + (t.Namespace != null ? (t.Namespace.ToLower() + ".") : "") + t.Name.Split("`")[0] + tp;
 	}
 
+	// Store references to all the assemblies that are loaded.
+	static List<Assembly> Assemblies = new List<Assembly>();
+
+	// Given a namespace and name, find a type.
+	static Type? FindCsType(string HaxeNS, string HaxeName) {
+		HaxeNS = HaxeNS.ToLower();
+		var assemblies = AppDomain.CurrentDomain.GetAssemblies().Concat(Assemblies);
+		foreach(var assembly in assemblies) {
+			foreach(Type type in assembly.GetTypes()) {
+				if((type.Namespace?.ToLower() ?? "") == HaxeNS && type.Name.Split("`")[0] == HaxeName) {
+					return type;
+				}
+			}
+		}
+		return null;
+	}
+
 	// Note to future self:
 	// - We need proper capitalization (OK: System.String vs WRONG: cs.system.String)
 	// - Use "TypeName`X" to denote a type with X type arguments (OK: List`1 vs WRONG: List WRONG: List<T>)
@@ -148,8 +165,14 @@ class ReadDLL {
 				Console.WriteLine("<no type found>");
 				return;
 			}
+		// The first argument is the type path we're looking for!
+		var HaxePath = args[0];
 
-			var def = new HxTypeDef();
+		// Load all the assmblies provided!
+		// dll_reader <type_path> <dll_1> <dll_2> ...
+		for(int i = 1; i < args.Length; i++) {
+			Assemblies.Add(Assembly.LoadFrom(args[i]));
+		}
 
 			def.Namespace = t.Namespace ?? "";
 			def.Name = t.Name;
@@ -160,6 +183,18 @@ class ReadDLL {
 			foreach(var arg in t.GetGenericArguments()) {
 				def.Params.Add(new HxTypeParam(arg));
 			}
+		// Separate the namespace part and the class part.
+		// The Haxe namespaces must all be lowercase, so they are compared differently.
+		var HaxePathMems = HaxePath.Split(".");
+		var HaxeNS = string.Join(".", HaxePathMems[..^1]).ToLower();
+		var HaxeName = HaxePathMems.Last();
+
+		// Find the type
+		var t = FindCsType(HaxeNS, HaxeName);
+		if(t == null) {
+			Console.WriteLine("<no type found>");
+			return;
+		}
 
 			var fields = t.GetFields(BindingFlags.Public);
 			foreach(var f in fields) {
