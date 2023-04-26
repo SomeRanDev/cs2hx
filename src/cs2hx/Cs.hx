@@ -1,5 +1,6 @@
 package cs2hx;
 
+import sys.net.Socket;
 import haxe.io.Path;
 import sys.io.Process;
 
@@ -16,6 +17,8 @@ class Cs {
 		Stores a list of all the C# .dlls added using `addDll`.
 	**/
 	static var autoDlls: Array<String> = [];
+
+	static var randomPort = 6114 + Std.random(200);
 
 	/**
 		Add a C# .dll to automatically add its types to the project at
@@ -49,25 +52,53 @@ class Cs {
 		}
 		if(StringTools.startsWith(name, "cs.")) {
 			final parts = name.split(".");
-			if(parts.remove("cs")) {
-				final process = new Process("\"" + dllReaderExePath() + "\" " + parts.join("."));
-
-				final allStr = process.stdout.readAll().toString();
-				final all = ~/\r*\n\r*/g.split(allStr);
-				//trace(~/\r*\n\r*/g.split(allStr));
-
-				// Get exit code.
-				final ec = process.exitCode();
-
-				final result = readDllReader(all, name);
-
-				// Might freeze unless readAll here??
-				// process.stdout.readAll();
-
-				if(ec == 0) {
-					if(result != null) {
-						return result;
+			if (parts.remove("cs")) {
+				// add port
+				final cmd = "\"" + dllReaderExePath() + "\" " + randomPort + " " + parts.join(".");
+				switch Sys.systemName() {
+					case "Mac", "Linux", "BSD":
+						Sys.command("chmod +x " + "\"" + dllReaderExePath() + "\"");
+					default:
+				}
+				final server = new Socket();
+				server.bind(new sys.net.Host("localhost"),randomPort);
+				server.setBlocking(false);
+				server.listen(1);
+				// create client
+				trace("create process");
+				Sys.println(cmd);
+				final process = new Process(cmd);
+				// client socket
+				var client:Socket = null;
+				// lines
+				final all:Array<String> = [];
+				var line:String = "";
+				while (true) {
+					if (client == null) {
+						trace("wait for accept");
+						client = server.accept();
 					}
+					try {
+						line = client.input.readLine();
+						switch line {
+							case "__exit__":
+								client.close();
+								break;
+							default:
+								all.push(line);
+						}
+						
+					}catch(_) {
+						Sys.sleep(0.1);
+					}
+				}
+				// Get exit code.
+				trace("waiting for exit code");
+				server.close();
+				final ec = process.exitCode();
+				if(ec == 0) {
+					final result = readDllReader(all, name);
+					return result;
 				} else {
 					Sys.println("dll_reader exited with code " + ec + "\n\n" + process.stderr.readAll());
 				}
