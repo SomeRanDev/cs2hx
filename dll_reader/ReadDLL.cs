@@ -1,9 +1,17 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Net.Sockets;
+
+
+namespace dll_reader {
+	public static class Connection {
+		public static Socket? socket = null;
+		public static void WriteLine(string s) {
+			Console.WriteLine("Sending: " + s);
+			socket.Send(System.Text.Encoding.UTF8.GetBytes(s + "\n"));
+		}
+	}
+}
 
 class HxTypeParam {
 	string Name;
@@ -13,7 +21,7 @@ class HxTypeParam {
 	}
 
 	public void Print() {
-		Console.WriteLine(Name);
+		dll_reader.Connection.WriteLine(Name);
 	}
 }
 
@@ -25,8 +33,8 @@ class HxField {
 	}
 
 	public void Print() {
-		Console.WriteLine(field.Name);
-		Console.WriteLine(ReadDLL.FullName(field.FieldType));
+		dll_reader.Connection.WriteLine(field.Name);
+		dll_reader.Connection.WriteLine(ReadDLL.FullName(field.FieldType));
 	}
 }
 
@@ -38,10 +46,10 @@ class HxProperty {
 	}
 
 	public void Print() {
-		Console.WriteLine(prop.Name);
-		Console.WriteLine(ReadDLL.FullName(prop.PropertyType));
-		Console.WriteLine(prop.CanRead);
-		Console.WriteLine(prop.CanWrite);
+		dll_reader.Connection.WriteLine(prop.Name);
+		dll_reader.Connection.WriteLine(ReadDLL.FullName(prop.PropertyType));
+		dll_reader.Connection.WriteLine(prop.CanRead.ToString());
+		dll_reader.Connection.WriteLine(prop.CanWrite.ToString());
 	}
 }
 
@@ -53,13 +61,13 @@ class HxMethod {
 	}
 
 	public void Print() {
-		Console.WriteLine(meth.Name);
-		Console.WriteLine(ReadDLL.FullName(meth.ReturnType));
-		Console.WriteLine(meth.GetParameters().Length);
+		dll_reader.Connection.WriteLine(meth.Name);
+		dll_reader.Connection.WriteLine(ReadDLL.FullName(meth.ReturnType));
+		dll_reader.Connection.WriteLine(meth.GetParameters().Length.ToString());
 		foreach(var p in meth.GetParameters()) {
-			Console.WriteLine(p.Name);
-			Console.WriteLine(ReadDLL.FullName(p.ParameterType));
-			Console.WriteLine(p.DefaultValue != null ? "true" : "false");
+			dll_reader.Connection.WriteLine(p.Name);
+			dll_reader.Connection.WriteLine(ReadDLL.FullName(p.ParameterType));
+			dll_reader.Connection.WriteLine(p.DefaultValue != null ? "true" : "false");
 		}
 	}
 }
@@ -77,31 +85,31 @@ class HxTypeDef {
 	public string? Doc = null;
 
 	public void Print() {
-		Console.WriteLine(ReadDLL.ConvertGenericTick(Name));
-		Console.WriteLine(IsInterface ? "true" : "false");
-		Console.WriteLine("cs" + (Namespace.Length > 0 ? "." : "") + Namespace.ToLower());
-		Console.WriteLine(SuperPath);
-		Console.WriteLine(Interfaces.Count);
+		dll_reader.Connection.WriteLine(ReadDLL.ConvertGenericTick(Name));
+		dll_reader.Connection.WriteLine(IsInterface ? "true" : "false");
+		dll_reader.Connection.WriteLine("cs" + (Namespace.Length > 0 ? "." : "") + Namespace.ToLower());
+		dll_reader.Connection.WriteLine(SuperPath);
+		dll_reader.Connection.WriteLine(Interfaces.Count.ToString());
 		foreach(var i in Interfaces) {
-			Console.WriteLine(i);
+			dll_reader.Connection.WriteLine(i);
 		}
 
-		Console.WriteLine(Params.Count);
+		dll_reader.Connection.WriteLine(Params.Count.ToString());
 		foreach(var p in Params) {
 			p.Print();
 		}
 
-		Console.WriteLine(Fields.Count);
+		dll_reader.Connection.WriteLine(Fields.Count.ToString());
 		foreach(var f in Fields) {
 			f.Print();
 		}
 
-		Console.WriteLine(Props.Count);
+		dll_reader.Connection.WriteLine(Props.Count.ToString());
 		foreach(var p in Props) {
 			p.Print();
 		}
 
-		Console.WriteLine(Methods.Count);
+		dll_reader.Connection.WriteLine(Methods.Count.ToString());
 		foreach(var m in Methods) {
 			m.Print();
 		}
@@ -175,12 +183,21 @@ class ReadDLL {
 			return;
 		}
 
-		// The first argument is the type path we're looking for!
-		var HaxePath = args[0];
+		var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+		// the first argument is the port number!
+		var port = Int32.Parse(args[0]);
+		Console.WriteLine("Connecting to localhost:" + port);
+		socket.Connect("localhost", port);
+		Console.WriteLine("Connected!");
+		dll_reader.Connection.socket = socket;
+
+
+		// The second argument is the type path we're looking for!
+		var HaxePath = args[1];
 
 		// Load all the assmblies provided!
 		// dll_reader <type_path> <dll_1> <dll_2> ...
-		for(int i = 1; i < args.Length; i++) {
+		for(int i = 2; i < args.Length; i++) {
 			Assemblies.Add(Assembly.LoadFrom(args[i]));
 		}
 
@@ -193,7 +210,7 @@ class ReadDLL {
 		// Find the type
 		var t = FindCsType(HaxeNS, HaxeName);
 		if(t == null) {
-			Console.WriteLine("<no type found>");
+			dll_reader.Connection.WriteLine("<no type found>");
 			return;
 		}
 
@@ -223,5 +240,10 @@ class ReadDLL {
 
 		// Print
 		def.Print();
+		// end
+		dll_reader.Connection.WriteLine("__exit__");
+		socket.Shutdown(SocketShutdown.Both);
+    	socket.Close();
+		Console.WriteLine("Done!");
 	}
 }
